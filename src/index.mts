@@ -1,29 +1,26 @@
-import { readFile, writeFile } from "node:fs/promises"
-import { setTimeout } from "node:timers/promises"
-
 import axios, { isAxiosError } from "axios"
 import { MongoBulkWriteError, MongoClient } from "mongodb"
 
-import * as env from "./env.mts"
+import { env } from "./env.mts" with { type: "macro" }
 import * as vk from "./vk.mts"
 
 let accessToken = ""
 
 try {
-  accessToken = await readFile("./access-token.txt", { encoding: "utf8" })
+  accessToken = await Bun.file("./access-token.txt").text()
 } catch {}
 
 const refreshAccessToken = async () => {
   accessToken = await vk.getAccessToken()
 
-  await writeFile("./access-token.txt", accessToken)
+  await Bun.write("./access-token.txt", accessToken)
 }
 
 if (!accessToken) {
   await refreshAccessToken()
 }
 
-const mongoClient = await MongoClient.connect(env.MONGODB_URL)
+const mongoClient = await MongoClient.connect(env("MONGODB_URL"))
 
 type VideoSchema = { _id: { id: number; ownerId: number } }
 
@@ -66,8 +63,8 @@ async function* saveVideos() {
 }
 
 const notify = (text: string) =>
-  axios.post(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-    chat_id: env.CHAT_ID,
+  axios.post(`https://api.telegram.org/bot${env("BOT_TOKEN")}/sendMessage`, {
+    chat_id: env("CHAT_ID"),
     text,
     parse_mode: "HTML",
   })
@@ -87,7 +84,9 @@ const run = async () => {
         throw error
       }
 
-      await setTimeout(seconds * 1000)
+      await new Promise(r => {
+        setTimeout(r, seconds * 1000)
+      })
 
       await notify(text)
     }

@@ -1,9 +1,9 @@
 import axios from "axios"
 import puppeteer from "puppeteer-core"
 
-import * as env from "./env.mts"
+import { env } from "./env.mts" with { type: "macro" }
 
-const clientId = { client_id: env.CLIENT_ID }
+const clientId = { client_id: env("CLIENT_ID") }
 
 const redirectUri = { redirect_uri: "https://oauth.vk.com/blank.html" }
 
@@ -51,7 +51,7 @@ export const getAccessToken = async () => {
     new URLSearchParams({
       ...clientId,
       ...redirectUri,
-      client_secret: env.CLIENT_SECRET,
+      client_secret: env("CLIENT_SECRET"),
       code,
     }),
   )
