@@ -1,20 +1,21 @@
 {
   "private": true,
   "scripts": {
-    "build": "bun build ./src/index.mts --compile --outfile=cli"
+    "build": "bun build ./src/index.mts --compile --outfile=cli",
+    "get:access:token": "sudo bun --port 80 ./public/index.html"
   },
   "prettier": {
     "arrowParens": "avoid",
     "semi": false
   },
   "dependencies": {
-    "axios": "^1.11.0",
+    "@vkid/sdk": "^2.6.1",
+    "axios": "^1.12.1",
     "envalid": "^8.1.0",
-    "mongodb": "^6.19.0",
-    "puppeteer-core": "^24.19.0"
+    "mongodb": "^6.19.0"
   },
   "devDependencies": {
-    "@types/node": "^24.3.1",
+    "@types/node": "^24.3.3",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   }

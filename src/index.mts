@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises"
 import { setTimeout } from "node:timers/promises"
 
 import axios, { isAxiosError } from "axios"
@@ -6,22 +5,6 @@ import { MongoBulkWriteError, MongoClient } from "mongodb"
 
 import { env } from "./env.mts"
 import * as vk from "./vk.mts"
-
-let accessToken = ""
-
-try {
-  accessToken = await readFile("./access-token.txt", { encoding: "utf8" })
-} catch {}
-
-const refreshAccessToken = async () => {
-  accessToken = await vk.getAccessToken()
-
-  await writeFile("./access-token.txt", accessToken)
-}
-
-if (!accessToken) {
-  await refreshAccessToken()
-}
 
 const mongoClient = await MongoClient.connect(env.MONGODB_URL)
 
@@ -34,7 +17,7 @@ async function* saveVideos() {
 
   const texts: string[] = []
 
-  for await (const { id, ownerId, title } of vk.getNewsfeed(accessToken)) {
+  for await (const { id, ownerId, title } of vk.getNewsfeed()) {
     documents.push({ _id: { id, ownerId } })
 
     texts.push(`<a href="https://vk.ru/video${ownerId}_${id}">${title}</a>`)
@@ -101,7 +84,7 @@ try {
     throw error
   }
 
-  await refreshAccessToken()
+  await vk.refreshAccessToken()
 
   await run()
 } finally {
