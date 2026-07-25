@@ -9,7 +9,7 @@ import {
 } from "@vkid/sdk"
 
 Config.init({
-  app: 54121221,
+  app: 54_121_221,
   redirectUrl: "http://localhost",
   responseMode: ConfigResponseMode.Callback,
   source: ConfigSource.LOWCODE,
@@ -17,13 +17,14 @@ Config.init({
 })
 
 new OneTap()
-  .render({
-    container: document.body,
-    showAlternativeLogin: true,
-  })
+  .render({ container: document.body, showAlternativeLogin: true })
   .on(WidgetEvents.ERROR, console.error)
-  .on(OneTapInternalEvents.LOGIN_SUCCESS, payload =>
-    Auth.exchangeCode(payload.code, payload.device_id)
-      .then(data => console.log({ ...payload, ...data }))
-      .catch(console.error),
-  )
+  .on(OneTapInternalEvents.LOGIN_SUCCESS, async payload => {
+    try {
+      const data = await Auth.exchangeCode(payload.code, payload.device_id)
+
+      console.log({ ...payload, ...data })
+    } catch (error) {
+      console.error(error)
+    }
+  })

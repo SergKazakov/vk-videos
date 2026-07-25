@@ -1,16 +1,9 @@
-import { setTimeout } from "node:timers/promises"
-
 import axios, { isAxiosError } from "axios"
-import { MongoBulkWriteError, MongoClient } from "mongodb"
+import { MongoBulkWriteError } from "mongodb"
 
 import { env } from "./env.mts"
+import { type VideoSchema, mongoClient, videoCollection } from "./mongodb.mts"
 import * as vk from "./vk.mts"
-
-const mongoClient = await MongoClient.connect(env.MONGODB_URL)
-
-type VideoSchema = { _id: { id: number; ownerId: number } }
-
-const videoCollection = mongoClient.db().collection<VideoSchema>("videos")
 
 async function* saveVideos() {
   const documents: VideoSchema[] = []
@@ -55,7 +48,7 @@ const notify = (text: string) =>
     parse_mode: "HTML",
   })
 
-const run = async () => {
+export const run = async () => {
   for await (const text of saveVideos()) {
     try {
       await notify(text)
@@ -70,23 +63,25 @@ const run = async () => {
         throw error
       }
 
-      await setTimeout(seconds * 1000)
+      await Bun.sleep(seconds * 1000)
 
       await notify(text)
     }
   }
 }
 
-try {
-  await run()
-} catch (error) {
-  if (!(error instanceof vk.TokenExpiredError)) {
-    throw error
+if (import.meta.main) {
+  try {
+    await run()
+  } catch (error) {
+    if (!(error instanceof vk.TokenExpiredError)) {
+      throw error
+    }
+
+    await vk.refreshAccessToken()
+
+    await run()
+  } finally {
+    await mongoClient.close()
   }
-
-  await vk.refreshAccessToken()
-
-  await run()
-} finally {
-  await mongoClient.close()
 }
