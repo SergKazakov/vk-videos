@@ -7,8 +7,10 @@ export class TokenExpiredError extends Error {}
 
 export const refreshAccessToken = async () => {
   const { data } = await axios.post<{
-    access_token: string
-    refresh_token: string
+    error?: string
+    error_description?: string
+    access_token?: string
+    refresh_token?: string
   }>(
     "https://id.vk.ru/oauth2/auth",
     new URLSearchParams({
@@ -19,6 +21,14 @@ export const refreshAccessToken = async () => {
       state: "foo",
     }),
   )
+
+  if (data.error) {
+    throw new Error(data.error_description ?? data.error)
+  }
+
+  if (!(data.access_token && data.refresh_token)) {
+    throw new Error("No tokens in response")
+  }
 
   await auth.save({
     accessToken: data.access_token,
@@ -65,6 +75,17 @@ const getNewsfeedChunk = async (startFrom?: string) => {
   return response
 }
 
+const getVideoItems = (
+  items: NonNullable<Response["response"]["items"][number]["video"]>["items"],
+) =>
+  items.reduce<{ id: number; ownerId: number; title: string }[]>((acc, it) => {
+    if (it.duration >= 5 * 60) {
+      acc.push({ id: it.id, ownerId: it.owner_id, title: it.title })
+    }
+
+    return acc
+  }, [])
+
 export async function* getNewsfeed() {
   let nextFrom: string | undefined
 
@@ -72,16 +93,8 @@ export async function* getNewsfeed() {
     const chunk = await getNewsfeedChunk(nextFrom)
 
     for (const { source_id: sourceId, video } of chunk.items) {
-      if (sourceId === -31352730 || !video) {
-        continue
-      }
-
-      for (const { id, owner_id: ownerId, title, duration } of video.items) {
-        if (duration < 5 * 60) {
-          continue
-        }
-
-        yield { id, ownerId, title }
+      if (sourceId !== -31_352_730 && video) {
+        yield* getVideoItems(video.items)
       }
     }
 

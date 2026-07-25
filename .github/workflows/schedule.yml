@@ -1,0 +1,31 @@
+name: Schedule
+
+on:
+  workflow_dispatch:
+
+jobs:
+  schedule:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dawidd6/action-download-artifact@v21
+        with:
+          name: cli
+          workflow: build.yml
+      - uses: dawidd6/action-download-artifact@v21
+        with:
+          name: auth-state
+          if_no_artifact_found: warn
+      - run: |
+          test -f auth.json || echo '${{ secrets.AUTH_JSON }}' > auth.json
+          chmod +x cli
+      - run: ./cli
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          MONGODB_URL: ${{ secrets.MONGODB_URL }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: auth-state
+          path: auth.json
+          overwrite: true

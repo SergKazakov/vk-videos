@@ -1,5 +1,3 @@
-import { setTimeout } from "node:timers/promises"
-
 import axios, { isAxiosError } from "axios"
 import { MongoBulkWriteError, MongoClient } from "mongodb"
 
@@ -70,7 +68,7 @@ const run = async () => {
         throw error
       }
 
-      await setTimeout(seconds * 1000)
+      await Bun.sleep(seconds * 1000)
 
       await notify(text)
     }

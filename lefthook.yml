@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: true
+  commands:
+    eslint:
+      glob: "*.{mjs,mts}"
+      run: bunx eslint --fix --cache {staged_files} && git add {staged_files}
+    tsc:
+      glob: "*.mts"
+      run: bunx tsc

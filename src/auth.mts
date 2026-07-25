@@ -1,10 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 
-let auth: {
-  accessToken: string
-  refreshToken: string
-  deviceId: string
-} = JSON.parse(await readFile("./auth.json", { encoding: "utf8" }))
+const path = join(process.cwd(), "auth.json")
+
+let auth: { accessToken: string; refreshToken: string; deviceId: string } =
+  await Bun.file(path).json()
 
 export const accessToken = () => auth.accessToken
 
@@ -18,5 +17,5 @@ export const save = async (data: {
 }) => {
   auth = { ...auth, ...data }
 
-  await writeFile("./auth.json", JSON.stringify(auth, null, 2))
+  await Bun.write(path, JSON.stringify(auth, null, 2))
 }
