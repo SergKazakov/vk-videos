@@ -1,11 +1,23 @@
 import axios from "axios"
 
-import * as auth from "./auth.mts"
 import { env } from "./env.mts"
+import { authCollection } from "./mongodb.mts"
 
 export class TokenExpiredError extends Error {}
 
+const getTokens = async () => {
+  const tokens = await authCollection.findOne({ _id: "tokens" })
+
+  if (!tokens) {
+    throw new Error("No tokens in db")
+  }
+
+  return tokens
+}
+
 export const refreshAccessToken = async () => {
+  const tokens = await getTokens()
+
   const { data } = await axios.post<{
     error?: string
     error_description?: string
@@ -16,8 +28,8 @@ export const refreshAccessToken = async () => {
     new URLSearchParams({
       grant_type: "refresh_token",
       client_id: env.CLIENT_ID,
-      refresh_token: auth.refreshToken(),
-      device_id: auth.deviceId(),
+      refresh_token: tokens.refreshToken,
+      device_id: tokens.deviceId,
       state: "foo",
     }),
   )
@@ -30,10 +42,16 @@ export const refreshAccessToken = async () => {
     throw new Error("No tokens in response")
   }
 
-  await auth.save({
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-  })
+  await authCollection.updateOne(
+    { _id: "tokens" },
+    {
+      $set: {
+        updatedAt: new Date(),
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      },
+    },
+  )
 }
 
 type Response = {
@@ -55,12 +73,14 @@ type Response = {
 }
 
 const getNewsfeedChunk = async (startFrom?: string) => {
+  const tokens = await getTokens()
+
   const {
     data: { error, response },
   } = await axios<Response>("https://api.vk.ru/method/newsfeed.get", {
     params: {
       ...(startFrom && { start_from: startFrom }),
-      access_token: auth.accessToken(),
+      access_token: tokens.accessToken,
       filters: "video",
       v: "5.199",
     },
