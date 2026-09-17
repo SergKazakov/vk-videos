@@ -12,16 +12,16 @@ for (;;) {
   const {
     data: { artifacts },
   } = await github<{ artifacts: { id: number }[] }>("", {
-    params: { per_page: 1, name: "auth-state" },
+    params: { name: "auth-state" },
   })
 
-  if (!artifacts[0]) {
+  if (artifacts.length === 0) {
     console.log(`Deleted ${count} artifact(s)`)
 
     break
   }
 
-  await github.delete(String(artifacts[0].id))
+  await Promise.all(artifacts.map(it => github.delete(String(it.id))))
 
-  ++count
+  count += artifacts.length
 }

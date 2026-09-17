@@ -78,7 +78,13 @@ if (import.meta.main) {
       throw error
     }
 
-    await vk.refreshAccessToken()
+    try {
+      await vk.refreshAccessToken()
+    } catch (refreshError) {
+      await notify("Сессия VK умерла")
+
+      throw refreshError
+    }
 
     await run()
   } finally {

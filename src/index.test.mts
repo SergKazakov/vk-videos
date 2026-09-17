@@ -8,13 +8,7 @@ const container = await new GenericContainer("mongo:8")
 
 Bun.env.MONGODB_URL = `mongodb://${container.getHost()}:${container.getMappedPort(27_017)}/test`
 
-afterAll(async () => {
-  const { mongoClient } = await import("./mongodb.mts")
-
-  await mongoClient.close()
-
-  await container.stop()
-})
+afterAll(() => container.stop())
 
 vi.mock("axios", () => ({
   default: Object.assign(
@@ -46,21 +40,22 @@ vi.mock("axios", () => ({
   isAxiosError: vi.fn(),
 }))
 
-vi.mock("./auth.mts", () => ({
-  accessToken: vi.fn(),
-  deviceId: vi.fn(),
-  refreshToken: vi.fn(),
-  save: vi.fn(),
-}))
-
 it("should filter VK videos before saving them", async () => {
+  const { authCollection, videoCollection } = await import("./mongodb.mts")
+
+  await authCollection.insertOne({
+    _id: "tokens",
+    updatedAt: new Date(),
+    accessToken: "foo",
+    refreshToken: "foo",
+    deviceId: "foo",
+  })
+
   const { run } = await import("./index.mts")
 
   await run()
 
   await run()
-
-  const { videoCollection } = await import("./mongodb.mts")
 
   await expect(videoCollection.find().toArray()).resolves.toEqual([
     { _id: { id: 2, ownerId: 2 } },
