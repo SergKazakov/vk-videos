@@ -1,4 +1,4 @@
-name: Build CLI
+name: CI
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -15,10 +15,5 @@ jobs:
       - parallel:
           - run: bun dedupe --check
           - run: bunx eslint
-          - run: bunx tsc
+          - run: bun check
           - run: bun run test
-          - run: bun run build
-      - uses: actions/upload-artifact@v7
-        with:
-          name: cli
-          path: cli

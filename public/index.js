@@ -23,7 +23,11 @@ new OneTap()
     try {
       const data = await Auth.exchangeCode(payload.code, payload.device_id)
 
-      console.log({ ...payload, ...data })
+      console.log({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        deviceId: payload.device_id,
+      })
     } catch (error) {
       console.error(error)
     }

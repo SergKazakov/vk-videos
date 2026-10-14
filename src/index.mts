@@ -68,6 +68,8 @@ export const run = async () => {
       await notify(text)
     }
   }
+
+  await vk.markSessionAlive()
 }
 
 if (import.meta.main) {
@@ -81,7 +83,9 @@ if (import.meta.main) {
     try {
       await vk.refreshAccessToken()
     } catch (refreshError) {
-      await notify("Сессия VK умерла")
+      if (await vk.markSessionExpired()) {
+        await notify("Сессия VK умерла")
+      }
 
       throw refreshError
     }
