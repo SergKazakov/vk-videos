@@ -41,12 +41,38 @@ async function* saveVideos() {
   }
 }
 
-const notify = (text: string) =>
-  axios.post(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-    chat_id: env.CHAT_ID,
-    text,
-    parse_mode: "HTML",
-  })
+const notify = async (text: string) => {
+  try {
+    await axios.post(
+      `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
+      { chat_id: env.CHAT_ID, text, parse_mode: "HTML" },
+    )
+  } catch (error) {
+    console.error(Error.isError(error) ? error.message : String(error))
+  }
+}
+
+const refreshAccessToken = async () => {
+  for (let attempt = 1, maxRetries = 3; attempt <= maxRetries; attempt++) {
+    try {
+      await vk.refreshAccessToken()
+
+      break
+    } catch (error) {
+      if (
+        attempt < maxRetries
+        && isAxiosError(error)
+        && (error.code === "ECONNREFUSED" || error.code === "ERR_BAD_REQUEST")
+      ) {
+        await Bun.sleep(5000 * attempt)
+
+        continue
+      }
+
+      throw error
+    }
+  }
+}
 
 export const run = async () => {
   for await (const text of saveVideos()) {
@@ -68,6 +94,8 @@ export const run = async () => {
       await notify(text)
     }
   }
+
+  await vk.markSessionAlive()
 }
 
 if (import.meta.main) {
@@ -79,9 +107,11 @@ if (import.meta.main) {
     }
 
     try {
-      await vk.refreshAccessToken()
+      await refreshAccessToken()
     } catch (refreshError) {
-      await notify("Сессия VK умерла")
+      if (await vk.markSessionExpired()) {
+        await notify("Сессия VK умерла")
+      }
 
       throw refreshError
     }

@@ -7,12 +7,25 @@ jobs:
   schedule:
     runs-on: ubuntu-latest
     steps:
-      - uses: dawidd6/action-download-artifact@v23
+      - uses: actions/github-script@v9
         with:
-          name: cli
-          workflow: build.yml
-      - run: chmod +x cli
-      - run: ./cli
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "ci.yml",
+              head_sha: context.sha,
+              per_page: 1,
+            })
+
+            if (data.workflow_runs[0]?.conclusion !== "success") {
+              core.setFailed("CI has not passed for this commit")
+            }
+
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun ci --production
+      - run: bun src/index.mts
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
