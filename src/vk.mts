@@ -5,8 +5,10 @@ import { authCollection } from "./mongodb.mts"
 
 export class TokenExpiredError extends Error {}
 
+export const AUTH_DOC_ID = "tokens"
+
 const getTokens = async () => {
-  const tokens = await authCollection.findOne({ _id: "tokens" })
+  const tokens = await authCollection.findOne({ _id: AUTH_DOC_ID })
 
   if (!tokens) {
     throw new Error("No tokens in db")
@@ -43,31 +45,40 @@ export const refreshAccessToken = async () => {
   }
 
   await authCollection.updateOne(
-    { _id: "tokens" },
+    { _id: AUTH_DOC_ID },
     {
       $set: {
         updatedAt: new Date(),
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
       },
+      $unset: { sessionExpiredAt: "" },
     },
   )
 }
 
+export const markSessionExpired = async () => {
+  const { modifiedCount } = await authCollection.updateOne(
+    { _id: AUTH_DOC_ID, sessionExpiredAt: { $exists: false } },
+    { $set: { sessionExpiredAt: new Date() } },
+  )
+
+  return modifiedCount > 0
+}
+
+export const markSessionAlive = async () => {
+  await authCollection.updateOne(
+    { _id: AUTH_DOC_ID, sessionExpiredAt: { $exists: true } },
+    { $unset: { sessionExpiredAt: "" } },
+  )
+}
+
+type Items = { id: number; owner_id: number; title: string; duration: number }[]
+
 type Response = {
   error?: { error_code: number; error_msg: string }
   response: {
-    items: {
-      source_id: number
-      video?: {
-        items: {
-          id: number
-          owner_id: number
-          title: string
-          duration: number
-        }[]
-      }
-    }[]
+    items: { source_id: number; video?: { items: Items } }[]
     next_from?: string
   }
 }
@@ -96,9 +107,7 @@ const getNewsfeedChunk = async (startFrom?: string) => {
   return response
 }
 
-const getVideoItems = (
-  items: NonNullable<Response["response"]["items"][number]["video"]>["items"],
-) =>
+const getVideoItems = (items: Items) =>
   items.reduce<{ id: number; ownerId: number; title: string }[]>((acc, it) => {
     if (it.duration >= 5 * 60) {
       acc.push({ id: it.id, ownerId: it.owner_id, title: it.title })

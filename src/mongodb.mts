@@ -13,6 +13,7 @@ export const videoCollection = db.collection<VideoSchema>("videos")
 export const authCollection = db.collection<{
   _id: string
   updatedAt: Date
+  sessionExpiredAt?: Date
   accessToken: string
   refreshToken: string
   deviceId: string

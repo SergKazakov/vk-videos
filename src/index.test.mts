@@ -1,9 +1,9 @@
 import { GenericContainer, Wait } from "testcontainers"
 import { afterAll, expect, it, vi } from "vitest"
 
-const container = await new GenericContainer("mongo:8")
+const container = await new GenericContainer("mongo:9")
   .withExposedPorts(27_017)
-  .withWaitStrategy(Wait.forLogMessage(/Waiting for connections/i))
+  .withWaitStrategy(Wait.forListeningPorts())
   .start()
 
 Bun.env.MONGODB_URL = `mongodb://${container.getHost()}:${container.getMappedPort(27_017)}/test`
@@ -43,8 +43,10 @@ vi.mock("axios", () => ({
 it("should filter VK videos before saving them", async () => {
   const { authCollection, videoCollection } = await import("./mongodb.mts")
 
+  const { AUTH_DOC_ID } = await import("./vk.mts")
+
   await authCollection.insertOne({
-    _id: "tokens",
+    _id: AUTH_DOC_ID,
     updatedAt: new Date(),
     accessToken: "foo",
     refreshToken: "foo",
