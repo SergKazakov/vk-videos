@@ -43,8 +43,10 @@ vi.mock("axios", () => ({
 it("should filter VK videos before saving them", async () => {
   const { authCollection, videoCollection } = await import("./mongodb.mts")
 
+  const { AUTH_DOC_ID } = await import("./vk.mts")
+
   await authCollection.insertOne({
-    _id: "tokens",
+    _id: AUTH_DOC_ID,
     updatedAt: new Date(),
     accessToken: "foo",
     refreshToken: "foo",
